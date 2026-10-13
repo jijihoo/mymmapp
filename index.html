@@ -1,0 +1,856 @@
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>부처님은 어디에</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      color: #222;
+    }
+
+    .container {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 왼쪽 검색 패널 */
+    .sidebar {
+      width: 390px;
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      z-index: 2;
+    }
+
+    .header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+    }
+
+    h1 {
+      margin: 0 0 7px;
+      font-size: 23px;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #777;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* 지역 선택과 상세 지역 입력 */
+    .region-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .region-select,
+    .search-input {
+      min-width: 0;
+      padding: 11px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .region-select {
+      width: 42%;
+    }
+
+    .search-input {
+      flex: 1;
+    }
+
+    .search-button {
+      margin-top: 8px;
+      width: 100%;
+      padding: 11px;
+      border: 0;
+      border-radius: 8px;
+      background: #fee500;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .location-button {
+      margin: 10px 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    /* 세 가지 탭 */
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 0 12px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .tab {
+      padding: 10px 4px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #f7f7f7;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .tab.active {
+      background: #fff4b8;
+      border-color: #e5bd00;
+      font-weight: bold;
+    }
+
+    .status {
+      padding: 11px 20px;
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+      border-bottom: 1px solid #eee;
+    }
+
+    /* 검색 결과 목록 */
+    .results {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .result-item {
+      padding: 14px 20px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    .result-item:hover {
+      background: #fffbea;
+    }
+
+    .result-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .result-item h3 {
+      margin: 0 0 7px;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .result-item p {
+      margin: 4px 0;
+      color: #666;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .category {
+      color: #967900 !important;
+    }
+
+    .favorite-button {
+      flex: none;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      font-size: 21px;
+      padding: 0 2px;
+    }
+
+    /* 지도 영역 */
+    .map-area {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      background: #eee;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+      color: #555;
+      z-index: 1;
+      text-align: center;
+      padding: 20px;
+      line-height: 1.7;
+    }
+
+    .map-loading.hidden {
+      display: none;
+    }
+
+    /* 연꽃 마커 */
+    .lotus-marker {
+      font-size: 29px;
+      line-height: 34px;
+      cursor: pointer;
+      filter: drop-shadow(0 1px 2px #fff);
+    }
+
+    /* 장소 상세 팝업 */
+    .popup {
+      max-width: 260px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .popup strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .popup p {
+      margin: 3px 0;
+    }
+
+    .popup a {
+      color: #2467c9;
+    }
+
+    /* 모바일 화면 */
+    @media (max-width: 700px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        min-width: 0;
+        height: 53%;
+        flex: none;
+        border-right: 0;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .header {
+        padding: 12px 14px;
+      }
+
+      h1 {
+        font-size: 19px;
+      }
+
+      .location-button {
+        margin: 8px 14px;
+      }
+
+      .result-item {
+        padding: 11px 14px;
+      }
+
+      .tabs {
+        padding-bottom: 8px;
+      }
+
+      .map-area {
+        flex: 1;
+        min-height: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- 왼쪽: 검색창과 결과 목록 -->
+    <aside class="sidebar">
+      <header class="header">
+        <h1>🪷 부처님은 어디에</h1>
+        <p class="subtitle">
+          절과 불교 굿즈, 마음에 드는 장소를 찾아보세요.
+        </p>
+
+        <form id="searchForm">
+          <div class="region-row">
+            <select id="regionSelect" class="region-select"
+              aria-label="검색 지역">
+              <option value="서울특별시">서울특별시</option>
+              <option value="부산광역시">부산광역시</option>
+              <option value="대구광역시">대구광역시</option>
+              <option value="인천광역시">인천광역시</option>
+              <option value="광주광역시">광주광역시</option>
+              <option value="대전광역시">대전광역시</option>
+              <option value="울산광역시">울산광역시</option>
+              <option value="세종특별자치시">세종특별자치시</option>
+              <option value="경기도">경기도</option>
+              <option value="강원특별자치도">강원특별자치도</option>
+              <option value="충청북도">충청북도</option>
+              <option value="충청남도">충청남도</option>
+              <option value="전북특별자치도">전북특별자치도</option>
+              <option value="전라남도">전라남도</option>
+              <option value="경상북도">경상북도</option>
+              <option value="경상남도">경상남도</option>
+              <option value="제주특별자치도">제주특별자치도</option>
+            </select>
+
+            <input
+              id="searchInput"
+              class="search-input"
+              type="search"
+              placeholder="상세 지역 (예: 종로구)"
+              aria-label="상세 지역"
+            >
+          </div>
+
+          <button class="search-button" type="submit">
+            선택한 지역 검색
+          </button>
+        </form>
+      </header>
+
+      <button id="locationButton" class="location-button" type="button">
+        ◎ 내 현재 위치 표시
+      </button>
+
+      <!-- 장소 카테고리 탭 -->
+      <nav class="tabs" aria-label="장소 카테고리">
+        <button class="tab active" data-tab="temples"
+          type="button" aria-selected="true">절</button>
+        <button class="tab" data-tab="goods"
+          type="button" aria-selected="false">불교 굿즈</button>
+        <button class="tab" data-tab="favorites"
+          type="button" aria-selected="false">마음에 드는 곳</button>
+      </nav>
+
+      <div id="status" class="status" role="status" aria-live="polite">
+        카카오 지도를 불러오는 중입니다.
+      </div>
+
+      <div id="results" class="results"></div>
+    </aside>
+
+    <!-- 오른쪽: 카카오 지도 -->
+    <main class="map-area">
+      <div id="map"></div>
+      <div id="mapLoading" class="map-loading">
+        카카오 지도를 불러오는 중입니다.
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // 지도와 검색 결과를 관리하는 변수
+    let map = null;
+    let placesService = null;
+    let currentLocationOverlay = null;
+    let mapReady = false;
+    let activeTab = "temples";
+    let searchRequestId = 0;
+    let placeOverlays = [];
+    let infoWindow = null;
+
+    const searchForm = document.getElementById("searchForm");
+    const searchInput = document.getElementById("searchInput");
+    const regionSelect = document.getElementById("regionSelect");
+    const resultsElement = document.getElementById("results");
+    const statusElement = document.getElementById("status");
+    const locationButton = document.getElementById("locationButton");
+    const mapLoading = document.getElementById("mapLoading");
+    const tabButtons = document.querySelectorAll(".tab");
+
+    // 카카오 지도 SDK가 준비되면 지도를 초기화합니다.
+    function loadKakaoMap() {
+      if (!window.kakao || !window.kakao.maps) {
+        showMapError(
+          "카카오 지도 SDK를 불러오지 못했습니다. API 키와 네트워크를 확인해 주세요."
+        );
+        return;
+      }
+
+      kakao.maps.load(initMap);
+    }
+
+    // 지도와 장소 검색 서비스를 생성합니다.
+    function initMap() {
+      try {
+        const initialPosition = new kakao.maps.LatLng(37.5665, 126.9780);
+
+        map = new kakao.maps.Map(
+          document.getElementById("map"),
+          {
+            center: initialPosition,
+            level: 7
+          }
+        );
+
+        placesService = new kakao.maps.services.Places();
+        infoWindow = new kakao.maps.InfoWindow({ zIndex: 5 });
+
+        mapReady = true;
+        mapLoading.classList.add("hidden");
+
+        searchForm.addEventListener("submit", handleSearch);
+        locationButton.addEventListener("click", getCurrentLocation);
+
+        tabButtons.forEach(function(button) {
+          button.addEventListener("click", function() {
+            switchTab(button.dataset.tab);
+          });
+        });
+
+        statusElement.textContent = "지역을 선택한 뒤 검색해 주세요.";
+
+        // 처음에는 서울의 절 검색 결과를 표시합니다.
+        searchPlaces();
+
+        // 현재 위치 요청이 실패해도 검색 기능은 계속 사용할 수 있습니다.
+        getCurrentLocation(false);
+
+      } catch (error) {
+        console.error("지도 초기화 오류:", error);
+        showMapError(
+          "지도를 초기화하지 못했습니다. API 키와 콘솔 오류를 확인해 주세요."
+        );
+      }
+    }
+
+    // 지도 로딩 오류를 화면에 표시합니다.
+    function showMapError(message) {
+      mapReady = false;
+      mapLoading.classList.remove("hidden");
+      mapLoading.textContent = message;
+      statusElement.textContent = message;
+    }
+
+    // 현재 위치를 파란색 원으로 표시합니다.
+    function getCurrentLocation(shouldCenter = true) {
+      if (!mapReady) {
+        statusElement.textContent = "지도를 준비하고 있습니다.";
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        statusElement.textContent =
+          "이 브라우저에서는 위치 정보를 사용할 수 없습니다.";
+        return;
+      }
+
+      statusElement.textContent = "현재 위치를 확인하고 있습니다.";
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const coords = new kakao.maps.LatLng(
+            position.coords.latitude,
+            position.coords.longitude
+          );
+
+          const content = document.createElement("div");
+          content.style.cssText =
+            "width:18px;height:18px;border:3px solid white;" +
+            "border-radius:50%;background:#4285f4;" +
+            "box-shadow:0 1px 5px #777;";
+
+          if (currentLocationOverlay) {
+            currentLocationOverlay.setMap(null);
+          }
+
+          currentLocationOverlay = new kakao.maps.CustomOverlay({
+            position: coords,
+            content: content,
+            yAnchor: 0.5,
+            zIndex: 10
+          });
+
+          currentLocationOverlay.setMap(map);
+
+          if (shouldCenter) {
+            map.setCenter(coords);
+            map.setLevel(5);
+            statusElement.textContent = "현재 위치로 이동했습니다.";
+          } else {
+            statusElement.textContent = "현재 위치를 표시했습니다.";
+          }
+        },
+        function(error) {
+          let message = "현재 위치를 확인하지 못했습니다.";
+
+          if (error.code === error.PERMISSION_DENIED) {
+            message = "위치 권한이 거부되었습니다. 브라우저 설정에서 허용해 주세요.";
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            message = "현재 위치 정보를 사용할 수 없습니다.";
+          } else if (error.code === error.TIMEOUT) {
+            message = "위치 확인 시간이 초과되었습니다.";
+          }
+
+          statusElement.textContent =
+            message + " 지역 검색은 계속 이용할 수 있습니다.";
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
+    }
+
+    // 탭 전환 시 이전 마커를 지우고 새 탭 결과를 검색합니다.
+    function switchTab(tabName) {
+      activeTab = tabName;
+
+      tabButtons.forEach(function(button) {
+        const isActive = button.dataset.tab === tabName;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+      });
+
+      clearPlaceMarkers();
+      resultsElement.replaceChildren();
+
+      // 이전 검색 요청의 응답이 늦게 도착해도 무시하도록 번호를 갱신합니다.
+      searchRequestId++;
+      searchPlaces();
+    }
+
+    // 선택한 지역과 상세 지역을 검색어로 만듭니다.
+    function getRegionQuery() {
+      const region = regionSelect.value;
+      const detail = searchInput.value.trim();
+
+      return detail ? region + " " + detail : region;
+    }
+
+    // 현재 탭과 선택한 지역에 맞는 장소를 검색합니다.
+    function searchPlaces() {
+      if (!mapReady || !placesService) return;
+
+      const requestId = ++searchRequestId;
+
+      clearPlaceMarkers();
+      resultsElement.replaceChildren();
+
+      if (activeTab === "favorites") {
+        showFavorites();
+        return;
+      }
+
+      const regionQuery = getRegionQuery();
+      const keyword = activeTab === "temples"
+        ? "절 사찰"
+        : "불교용품 불교 굿즈";
+
+      const query = regionQuery + " " + keyword;
+
+      statusElement.textContent = "'" + query + "' 검색 중입니다.";
+
+      // 선택한 지역명을 검색어에 포함합니다.
+      placesService.keywordSearch(
+        query,
+        function(data, resultStatus) {
+          // 오래된 검색 요청의 결과는 표시하지 않습니다.
+          if (requestId !== searchRequestId) return;
+
+          if (resultStatus === kakao.maps.services.Status.OK) {
+            displayResults(data);
+          } else if (
+            resultStatus === kakao.maps.services.Status.ZERO_RESULT
+          ) {
+            statusElement.textContent =
+              "검색 결과가 없습니다. 지역이나 검색어를 바꿔 보세요.";
+          } else {
+            statusElement.textContent =
+              "검색 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+          }
+        },
+        { size: 15 }
+      );
+    }
+
+    // 검색 결과 목록과 🪷 마커를 지도에 표시합니다.
+    function displayResults(places) {
+      clearPlaceMarkers();
+      resultsElement.replaceChildren();
+
+      if (!places.length) {
+        statusElement.textContent = "표시할 장소가 없습니다.";
+        return;
+      }
+
+      statusElement.textContent =
+        "검색 결과 " + places.length +
+        "개를 찾았습니다. 🪷 마커를 누르면 상세 정보를 볼 수 있습니다.";
+
+      places.forEach(function(place) {
+        const position = new kakao.maps.LatLng(
+          Number(place.y),
+          Number(place.x)
+        );
+
+        // 기본 마커 대신 연꽃 이모지를 사용합니다.
+        const markerContent = document.createElement("div");
+        markerContent.className = "lotus-marker";
+        markerContent.textContent = "🪷";
+        markerContent.setAttribute("role", "button");
+        markerContent.setAttribute(
+          "aria-label",
+          place.place_name + " 상세 정보"
+        );
+
+        const overlay = new kakao.maps.CustomOverlay({
+          position: position,
+          content: markerContent,
+          yAnchor: 1,
+          clickable: true,
+          zIndex: 4
+        });
+
+        overlay.setMap(map);
+        placeOverlays.push(overlay);
+
+        markerContent.addEventListener("click", function(event) {
+          event.stopPropagation();
+          showPlacePopup(place, position);
+        });
+
+        // 검색 결과 항목을 만듭니다.
+        const item = document.createElement("article");
+        item.className = "result-item";
+        item.tabIndex = 0;
+        item.setAttribute("role", "button");
+
+        const top = document.createElement("div");
+        top.className = "result-top";
+
+        const textArea = document.createElement("div");
+
+        const title = document.createElement("h3");
+        title.textContent = place.place_name || "이름 없는 장소";
+
+        const category = document.createElement("p");
+        category.className = "category";
+        category.textContent =
+          place.category_name ||
+          (activeTab === "temples" ? "절 / 사찰" : "불교 굿즈");
+
+        textArea.append(title, category);
+
+        // 하트 버튼으로 즐겨찾기를 관리합니다.
+        const favoriteButton = document.createElement("button");
+        favoriteButton.type = "button";
+        favoriteButton.className = "favorite-button";
+        favoriteButton.textContent = isFavorite(place) ? "❤️" : "♡";
+        favoriteButton.setAttribute("aria-label", "마음에 드는 곳 저장");
+
+        favoriteButton.addEventListener("click", function(event) {
+          event.stopPropagation();
+          toggleFavorite(place);
+          favoriteButton.textContent = isFavorite(place) ? "❤️" : "♡";
+        });
+
+        top.append(textArea, favoriteButton);
+
+        const address = document.createElement("p");
+        address.textContent =
+          place.road_address_name ||
+          place.address_name ||
+          "주소 정보 없음";
+
+        const phone = document.createElement("p");
+        phone.textContent = place.phone
+          ? "전화: " + place.phone
+          : "전화번호 정보 없음";
+
+        item.append(top, address, phone);
+
+        item.addEventListener("click", function() {
+          map.setCenter(position);
+          map.setLevel(3);
+          showPlacePopup(place, position);
+        });
+
+        // 키보드로도 장소를 선택할 수 있게 합니다.
+        item.addEventListener("keydown", function(event) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            map.setCenter(position);
+            map.setLevel(3);
+            showPlacePopup(place, position);
+          }
+        });
+
+        resultsElement.appendChild(item);
+      });
+    }
+
+    // 장소의 상세 정보를 팝업으로 표시합니다.
+    function showPlacePopup(place, position) {
+      const popup = document.createElement("div");
+      popup.className = "popup";
+
+      const title = document.createElement("strong");
+      title.textContent = place.place_name || "이름 없는 장소";
+
+      const category = document.createElement("p");
+      category.textContent = place.category_name || "카테고리 정보 없음";
+
+      const address = document.createElement("p");
+      address.textContent =
+        "주소: " +
+        (place.road_address_name || place.address_name || "정보 없음");
+
+      const phone = document.createElement("p");
+      phone.textContent =
+        "전화: " + (place.phone || "등록된 전화번호 없음");
+
+      const link = document.createElement("a");
+      link.href = place.place_url || "https://map.kakao.com/";
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "카카오맵에서 자세히 보기";
+
+      popup.append(title, category, address, phone, link);
+
+      infoWindow.setContent(popup);
+
+      // 정보창을 열기 위한 기준 마커는 화면에 표시하지 않습니다.
+      const anchor = new kakao.maps.Marker({ position: position });
+      infoWindow.open(map, anchor);
+    }
+
+    // 저장된 즐겨찾기를 브라우저에서 불러옵니다.
+    function getFavorites() {
+      try {
+        return JSON.parse(
+          localStorage.getItem("buddhaPlacesFavorites") || "[]"
+        );
+      } catch (error) {
+        return [];
+      }
+    }
+
+    // 장소가 즐겨찾기에 저장되어 있는지 확인합니다.
+    function isFavorite(place) {
+      const favorites = getFavorites();
+      const placeId = place.id || place.place_url || place.place_name;
+
+      return favorites.some(function(item) {
+        return item.id === placeId;
+      });
+    }
+
+    // 장소를 즐겨찾기에 추가하거나 삭제합니다.
+    function toggleFavorite(place) {
+      const favorites = getFavorites();
+      const placeId = place.id || place.place_url || place.place_name;
+
+      const exists = favorites.some(function(item) {
+        return item.id === placeId;
+      });
+
+      let updated;
+
+      if (exists) {
+        updated = favorites.filter(function(item) {
+          return item.id !== placeId;
+        });
+      } else {
+        updated = favorites.concat([{
+          id: placeId,
+          place_name: place.place_name || "이름 없는 장소",
+          category_name: place.category_name || "",
+          address_name: place.address_name || "",
+          road_address_name: place.road_address_name || "",
+          phone: place.phone || "",
+          place_url: place.place_url || "",
+          x: String(place.x),
+          y: String(place.y)
+        }]);
+      }
+
+      // 즐겨찾기는 브라우저에 저장되어 새로고침 후에도 유지됩니다.
+      localStorage.setItem(
+        "buddhaPlacesFavorites",
+        JSON.stringify(updated)
+      );
+
+      if (activeTab === "favorites") {
+        showFavorites();
+      }
+    }
+
+    // 즐겨찾기 탭에는 저장한 장소만 표시합니다.
+    function showFavorites() {
+      clearPlaceMarkers();
+
+      const favorites = getFavorites();
+
+      if (!favorites.length) {
+        resultsElement.replaceChildren();
+        statusElement.textContent =
+          "아직 저장한 장소가 없습니다. 절이나 굿즈 탭에서 ♡를 눌러 저장하세요.";
+        return;
+      }
+
+      displayResults(favorites);
+      statusElement.textContent =
+        "마음에 드는 곳 " + favorites.length + "개를 표시합니다.";
+    }
+
+    // 기존 장소 마커와 정보창을 지웁니다. 현재 위치 표시는 유지합니다.
+    function clearPlaceMarkers() {
+      placeOverlays.forEach(function(overlay) {
+        overlay.setMap(null);
+      });
+
+      placeOverlays = [];
+
+      if (infoWindow) {
+        infoWindow.close();
+      }
+    }
+
+    // 지역 검색 폼을 제출하면 선택한 지역의 장소를 다시 검색합니다.
+    function handleSearch(event) {
+      event.preventDefault();
+
+      if (!mapReady) {
+        statusElement.textContent = "지도를 준비하고 있습니다.";
+        return;
+      }
+
+      searchPlaces();
+    }
+  </script>
+
+  <!-- 본인의 카카오 JavaScript 키를 입력하세요. -->
+  <script
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=여기에_카카오_JavaScript_키_입력&libraries=services&autoload=false"
+    onload="loadKakaoMap()"
+    onerror="showMapError('카카오 지도 SDK 로드에 실패했습니다. API 키와 인터넷 연결을 확인해 주세요.')"
+  ></script>
+</body>
+</html>
+```
